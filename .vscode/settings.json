@@ -1,6 +1,15 @@
 {
     "files.associations": {
-        "*.tpp": "cpp"
+        "*.tpp": "cpp",
+        "memory": "cpp",
+        "iosfwd": "cpp",
+        "vector": "cpp",
+        "iostream": "cpp",
+        "__split_buffer": "cpp",
+        "string": "cpp",
+        "map": "cpp",
+        "set": "cpp",
+        "ostream": "cpp"
     },
     "terminal.integrated.shell.windows": "cmd.exe"
 }
