@@ -1,1 +1,1 @@
-This is fp tree project for cross platform ide.
+演算法寫出來 但介面要改
