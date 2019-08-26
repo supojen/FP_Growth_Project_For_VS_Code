@@ -12,25 +12,19 @@ FPGrowth::FPGrowth(string fileName,int minSupportCount)
 	this->minSupportCount = minSupportCount;
 
 
+	//step 1 : get the input (get the transactions)
 	transactions = readTransactions(fileName);
+	//step 2 : find the items' frequency
 	frequencyOfItems = itemsFrequency(transactions);
+	//step 3 : reorder the transactions according to the frequency
 	transactions = sortRecordsByFrequency(transactions, frequencyOfItems);
-
+	//step 4 : build the frequency pattern tree
 	buildFPTree(transactions, rootOfFPTree, this->headerTable);
-	//testing
-	//displayHeaderTable("C",this->headerTable);
 
-	/* 
-	for (map<string, int>::iterator it = frequencyOfItems.begin(); it != frequencyOfItems.end(); ++it) {
-		findFrequencyPattern(it->first);
-	}
-	*/
-	//for testing 
+	//step 5 : according to the frequency pattern tree, find the frequnecy pattern 
 	findFrequencyPattern("E",this->frequencyPattern);
 
 	
-
-
 }
 
 /*******************************************************************************
@@ -42,7 +36,18 @@ void FPGrowth::setMinSupportCount(int minSupportCount)
 	this->minSupportCount = minSupportCount;
 }
 
-
+/*******************************************************************************
+		DEFINITION:
+			Set the this->transactions.
+		INPUT:
+			vector<vector<string> > transactions - represeting the transactions
+		OUTPUT:
+			None
+******************************************************************************/
+void FPGrowth::getTransactionsByVectors(vector<vector<string> > transactions)
+{
+	this->transactions = transactions;
+}
 
 /*******************************************************************************
 		DEFINITION:
@@ -200,7 +205,7 @@ void FPGrowth::buildFPTree(
 
 	for (auto &transaction : transactions)
 	{
-		treeRoot = addOneTransaction(treeRoot, transaction, header);
+		addOneTransaction(treeRoot, transaction, header);
 	}
 	
 }
@@ -220,7 +225,7 @@ void FPGrowth::buildFPTree(
 	OUTPUT:
 		shared_ptr<FPTreeNode> root - the fp-tree root
 *******************************************************************************/
-shared_ptr<FPTreeNode> FPGrowth::addOneTransaction(
+void FPGrowth::addOneTransaction(
 							shared_ptr<FPTreeNode> &root, 
 							vector<string> transaction,
 							map<string, vector<shared_ptr<FPTreeNode> > > & header)
@@ -247,7 +252,6 @@ shared_ptr<FPTreeNode> FPGrowth::addOneTransaction(
 		
 	}
 
-	return root;
 }
 
 /*******************************************************************************
@@ -352,13 +356,13 @@ void FPGrowth::findFrequencyPattern(string itemName, vector<FreqPatternStruct> &
 {
 
 
-	shared_ptr<CPB_Node> conditionalPatternBase;
-	vector<string> branch;                    		//CALC & CALC
-	shared_ptr<CPB_Node> iterForCPB;                //CALC & CALC
-	vector<vector<string> > branches;
-	map<string, int> itemFreqCPB;
-	shared_ptr<FPTreeNode> FPTreeForCPB; 
-	map<string, vector<shared_ptr<FPTreeNode> > > leafNodeTable;  //CALC & CALC
+	shared_ptr<CPB_Node> conditionalPatternBase;                  //CALC & CALC - The conditional pattern base
+	vector<string> branch;                    					  //CALC & CALC - The branch of the pattern
+	shared_ptr<CPB_Node> iterForCPB;                			  //CALC & CALC - This variable is used to iterate through all the partten in the Conditional Partten Base
+	vector<vector<string> > branches;                             //CALC & CALC - All of the branches in the Conditional Partten Base
+	map<string, int> itemFreqCPB;                                 //CALC & CALC - An frequncy table according to the Conditional Partten Base
+	shared_ptr<FPTreeNode> FPTreeForCPB;                          //CALC & CALC - This is the little Frequncy Partten Tree related to a specific item
+	map<string, vector<shared_ptr<FPTreeNode> > > leafNodeTable;  //CALC & CALC - This is used to make FPTree cruising back more convenient
 
 
 
@@ -368,7 +372,7 @@ void FPGrowth::findFrequencyPattern(string itemName, vector<FreqPatternStruct> &
 	// Step1 : abtain the conditinal pattearn base
 	for(auto iterNode : headerTable[itemName])
 	{
-		crusingBack(iterNode, branch);
+		branch = crusingBack(iterNode);
 		addCPB_Node(conditionalPatternBase, iterNode->count, branch);	
 		branch.clear();	
 	}
@@ -376,7 +380,7 @@ void FPGrowth::findFrequencyPattern(string itemName, vector<FreqPatternStruct> &
 	// Step2 : find the freaquncy of items based on conditional pattern base
 	// using the function --> map<string, int> itemsFrequency(vector<vector<string> >)
 
-	// Step 2-1 : obtain all branche from conditionalPatternBase and store them in variable branches
+	// Step 2-1 : obtain all branch from conditionalPatternBase and store them in variable branches
 	iterForCPB = conditionalPatternBase;
 	while(iterForCPB != NULL)
 	{
@@ -399,19 +403,6 @@ void FPGrowth::findFrequencyPattern(string itemName, vector<FreqPatternStruct> &
 	// Step 4 : check if there are any item's frequency lower than minSupportCount
 	setMinSupportForCPB(branches, itemFreqCPB);
 
-	//************* testing block ****************//
-	/* 
-		cout << "---------- display branch -----------" << endl;
-		for(auto &branch : branches)
-		{
-			for(auto &item :branch)
-			{
-				cout << item << ",";
-			}
-			cout << endl;
-		}
-	*/
-	//************* testing block ****************//
 
 
 
@@ -430,26 +421,6 @@ void FPGrowth::findFrequencyPattern(string itemName, vector<FreqPatternStruct> &
 
 
 	//************* testing block ****************//
-	//displayCPB(conditionalPatternBase);
-	//display branches
-	/* 
-	cout << endl << "---------- Display Branches ----------" << endl;
-	for(auto &branch : branches)
-	{
-		for(auto &item : branch)
-		{
-			cout << item << ",";
-		}
-		cout << endl ;
-	}
-	*/
-	//displayFrequencyOfItem(itemFreqCPB);
-	//displayHeaderTable(itemName,leafNodeTable);
-	/* 
-	cout << endl <<"--- crusing back of all littel fp tree ---";
-	for(auto &node : leafNodeTable[itemName])
-		displayCrusingBack(node);
-	*/
 	displayFreqPattern();
 	//************* testing block ****************//
 }
@@ -457,7 +428,12 @@ void FPGrowth::findFrequencyPattern(string itemName, vector<FreqPatternStruct> &
 
 /*******************************************************************************
 	DEFINITION:
-		This function help us add the new node to the CPB linked list.
+		This function help us add the new node to the Conditaional pattern base.
+	INPUT:
+		int count - represeting in how many times the partten exist
+		vector<string> branch - representing all the items in the pattern 
+	OUTPUT:
+		A Conditional partten base that conatain a new partten(branch + count)
 ******************************************************************************/
 void FPGrowth::addCPB_Node(shared_ptr<CPB_Node> &node, int count, vector<string> branch)
 {
@@ -483,9 +459,16 @@ void FPGrowth::addCPB_Node(shared_ptr<CPB_Node> &node, int count, vector<string>
 	DEFINITION:
 		This function crusing back from the fp tree node, and then store the 
 		path to the branch.
+	INPUT:
+		shared_ptr<FPTreeNode> itemNode - representing the starting node that we want to 
+										  cruising backs
+	OUTPUT:
+		vector<string> branch - this branch contain all the node that in the road when 
+								 we crusiing back
 ******************************************************************************/
-void FPGrowth::crusingBack(shared_ptr<FPTreeNode> itemNode, vector<string>& branch)
+vector<string> FPGrowth::crusingBack(shared_ptr<FPTreeNode> itemNode)
 {
+	vector<string> branch;
 	shared_ptr<FPTreeNode> iterNode;
 	
 	iterNode = itemNode->parent;
@@ -495,6 +478,8 @@ void FPGrowth::crusingBack(shared_ptr<FPTreeNode> itemNode, vector<string>& bran
 		branch.push_back(iterNode->itemName);
 		iterNode = iterNode->parent;
 	}
+
+	return branch;
 }
 
 
@@ -529,7 +514,14 @@ void FPGrowth::getFrequencyPattern(string itemName,
 
 /*******************************************************************************
 	DEFINITION:
-		找pattern外圈
+		Find the frequncy pattern by one branch. 
+		However after adding the pattern in the pattern array,
+		we delete the leaf node and do it again
+	INPUT:
+		string itemName             - the item name which we want to obtained
+		shared_ptr<FPTreeNode> node - the leaf node of the branch that we want to obtained the pattern
+	OUTPUT:
+		vector<FreqPatternStruct> &freqPattern  - the array of FreqPatternStruct that include the newly added pattern
 ******************************************************************************/
 void FPGrowth::findPatternOutter(string itemName, 
 							     vector<FreqPatternStruct> &freqPattern,
@@ -549,32 +541,42 @@ void FPGrowth::findPatternOutter(string itemName,
 
 /*******************************************************************************
 	DEFINITION:
-		找pattern內圈
+		Find the frequncy pattern by one branch
+	INPUT:
+		string itemName             - the item name which we want to obtained
+		shared_ptr<FPTreeNode> node - the leaf node of the branch that we want to obtained the pattern
+	OUTPUT:
+		vector<FreqPatternStruct> &freqPattern  - the array of FreqPatternStruct that include the newly added pattern
 ******************************************************************************/
 void FPGrowth::findPatternInner(string itemName,
 								shared_ptr<FPTreeNode> node,
 								vector<FreqPatternStruct> &freqPattern)
 {
-	FreqPatternStruct FPS;
-	set<string> patternHolder;
-	shared_ptr<FPTreeNode> iterNode;
-	int countForPattern;
-	bool isPatternExit;
+	FreqPatternStruct FPS;           // CALC & CALC - This is the temporary holder for the new pattrn
+	set<string> patternHolder;       // CALC & CALC - This is used to hold the branch for the pattern we obtained
+	shared_ptr<FPTreeNode> iterNode; // CALC & CALC - Used to iter through the little FPTree
+	int countForPattern;             // CALC & CALC - This is used to hoild the count for the pattern
+	bool isPatternExit;              // CALC & CALC - This is used to check if the pattern exist or not
 
+	//Step 1: we need insert the item which we want to find its frequncy pattern(branch) in the pattern
 	patternHolder.insert(itemName);
 
+	//Step 2: Initialize some variable before the loop.
+	//        Set the iterNode to the first node we want to iter(The leaf dnode)
+	//        Set the pattern count to the leaf node's count
 	iterNode = node;
 	countForPattern = iterNode->count;
+	//Step 3: crusing back from the leaf node, and do some process
 	while(!iterNode->itemName.empty())
 	{
+		//insert all the item we go through into the pattern(branch)
 		patternHolder.insert(iterNode->itemName);
-
+		//whenever we insert one item into the pattern, we create a pattern for the item
 		FPS.count = countForPattern;
 		FPS.pattern = patternHolder;
 
 
-		//if the pattern is not exit, than add it
-		//else add the count
+		//check if the pattern already exist or not
 		isPatternExit = false;
 		for(auto &patternIter : freqPattern)
 		{
@@ -583,24 +585,31 @@ void FPGrowth::findPatternInner(string itemName,
 				isPatternExit = true;
 			}
 		}
+		//if the pattern is not exit, 
+		//than add it
+		//else add the count
 		if(!isPatternExit)
 		{
 			freqPattern.push_back(FPS);
 		}
 		
-
-
+		//loop through the next node
 		iterNode = iterNode->parent;
 	}
 		
 }
 
 
-//改
+
 /*******************************************************************************
 	DEFINITION:
 		This function will check if there is any item's frequency that lower than 
 		minSupportCount.
+	INPUT:
+		map<string,int> itemFreq - representing the freqency of item based on Conditional Partten Base
+	OUTPUT:
+		vector<vector<string> > branches - an new branches without an item that it's frequncy lower than 
+										   minSupport
 ******************************************************************************/
 void FPGrowth::setMinSupportForCPB(vector<vector<string> > &branches, map<string,int> itemFreq)
 {
@@ -627,10 +636,11 @@ void FPGrowth::setMinSupportForCPB(vector<vector<string> > &branches, map<string
 
 
 
-/*
-	This part is for degugging
-*/
 
+/*******************************************************************************
+	DEFINITION:
+		This function will display the transactions.
+******************************************************************************/
 void FPGrowth::displayTransactions()const
 {
 	cout << "----- Display Transactions -----" << endl;
@@ -646,6 +656,10 @@ void FPGrowth::displayTransactions()const
 	cout << "---------------------------------------" << endl;
 }
 
+/*******************************************************************************
+	DEFINITION:
+		This function will display all the items' frequency.
+******************************************************************************/
 void FPGrowth::displayFrequencyOfItem(map<string, int> itemFreq) const
 {
 	cout << endl << "----- Display freaquency of items -----" << endl;
@@ -656,7 +670,10 @@ void FPGrowth::displayFrequencyOfItem(map<string, int> itemFreq) const
 	cout << "---------------------------------------" << endl;
 }
 
-
+/*******************************************************************************
+	DEFINITION:
+		This function will display frequency pattern tree's noed's information.
+******************************************************************************/
 void FPGrowth::displayNode(shared_ptr<FPTreeNode> node) const
 {
 	cout << endl << "--------- display FP Tree Node ---------" << endl;
@@ -681,7 +698,10 @@ void FPGrowth::displayNode(shared_ptr<FPTreeNode> node) const
 	
 }
 
-
+/*******************************************************************************
+	DEFINITION:
+		This function will display fp-tree node's route in back forth direction.
+******************************************************************************/
 void FPGrowth::displayCrusingBack(shared_ptr<FPTreeNode> node)const
 {
 	shared_ptr<FPTreeNode> iterNode;
@@ -696,6 +716,10 @@ void FPGrowth::displayCrusingBack(shared_ptr<FPTreeNode> node)const
 }
 
 
+/*******************************************************************************
+	DEFINITION:
+		This function will display the header table.
+******************************************************************************/
 void FPGrowth::displayHeaderTable(string item, map<string, vector<shared_ptr<FPTreeNode> > > header)const
 {
 	cout << endl << "---------- Header table for " << item << " ----------" << endl;
@@ -706,7 +730,10 @@ void FPGrowth::displayHeaderTable(string item, map<string, vector<shared_ptr<FPT
 }
 
 
-
+/*******************************************************************************
+	DEFINITION:
+		This function will display the Conditional Pattern Base.
+******************************************************************************/
 void FPGrowth::displayCPB(shared_ptr<CPB_Node>& node)const
 {
 	/***************************
@@ -733,6 +760,10 @@ void FPGrowth::displayCPB(shared_ptr<CPB_Node>& node)const
 }
 
 
+/*******************************************************************************
+	DEFINITION:
+		This function will display the Frequency Pattern.
+******************************************************************************/
 void FPGrowth::displayFreqPattern()const
 {
 	//vector<FreqPatternStruct> frequencyPattern;

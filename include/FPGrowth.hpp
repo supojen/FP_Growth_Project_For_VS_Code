@@ -12,6 +12,9 @@
 
 using namespace std;
 
+/**
+ * @brief This is the struct used to represent the node of the frequency pattern tree.
+ */
 struct FPTreeNode {
 	string itemName;
 	int count;
@@ -19,14 +22,20 @@ struct FPTreeNode {
 	vector<shared_ptr<FPTreeNode> > children;
 };
 
-
+/**
+ * @brief Representing the condditinal pattern base.
+ * 		  Conditional pattern base include two important part.
+ * 		  The frist part is the count : representing the how many times the partten exist
+ * 		  The second part is the branch : representing the partten
+ * 		  And the Conditional Partten Base is a collections of some partten related to a specific item
+ */
 struct CPB_Node {
-int count;
-vector<string> branch;
-shared_ptr<CPB_Node> next;
+	int count;
+	vector<string> branch;
+	shared_ptr<CPB_Node> next;
 };
 
- 
+
 struct FreqPatternStruct {
 	int count;
 	set<string> pattern;
@@ -51,20 +60,23 @@ class FPGrowth
 
 	private:
 
-
+		void getTransactionsByVectors(vector<vector<string> >);
 		vector<vector<string> > readTransactions(string);
 		map<string, int> itemsFrequency(vector<vector<string> >);
 		vector<vector<string> > sortRecordsByFrequency(vector<vector<string> >, map<string, int>);
+		//step 4 : build the frequency pattern tree
 		void buildFPTree(vector<vector<string> >, shared_ptr<FPTreeNode>&, map<string, vector<shared_ptr<FPTreeNode> > >&);
+		//step 5 : according to the frequency pattern tree, find the frequnecy pattern 
 		void findFrequencyPattern(string, vector<FreqPatternStruct>&);
 
 
 	private:
 		/*
+			Helper function for step 4:
 			Some help function for creating a FP-tree and header-table
 		*/
 		shared_ptr<FPTreeNode> findChildrenNodeRelatedToItem(shared_ptr<FPTreeNode>, string);
-		shared_ptr<FPTreeNode> addOneTransaction(shared_ptr<FPTreeNode> &, vector<string>, map<string, vector<shared_ptr<FPTreeNode> > >&);
+		void addOneTransaction(shared_ptr<FPTreeNode> &, vector<string>, map<string, vector<shared_ptr<FPTreeNode> > >&);
 		shared_ptr<FPTreeNode> addChildNode(shared_ptr<FPTreeNode>&, string);
 		map<string, vector<shared_ptr<FPTreeNode> > >
 			addItemToHeaderTable(map<string, vector<shared_ptr<FPTreeNode> > > headerTable,
@@ -74,13 +86,12 @@ class FPGrowth
 
 	private:
 		/*
-			This function is about creating conditional pattern base
+			Helper function for step 5:
+			Some help function for finding the frequncy pattern
 		*/
 		void addCPB_Node(shared_ptr<CPB_Node>&, int, vector<string>);
-		void crusingBack(shared_ptr<FPTreeNode>, vector<string>&);
+		vector<string> crusingBack(shared_ptr<FPTreeNode>);
 		void setMinSupportForCPB(vector<vector<string> >&, map<string,int>);
-
-
 		void getFrequencyPattern(string, vector<FreqPatternStruct> &, map<string, vector<shared_ptr<FPTreeNode> > >);
 		void findPatternOutter(string, vector<FreqPatternStruct> &, shared_ptr<FPTreeNode> node);
 		void findPatternInner(string,
